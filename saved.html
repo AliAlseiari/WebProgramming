@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Saved Recipes - MoodMeal</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1><i class="fas fa-bookmark"></i> Saved MoodMeals</h1>
+      <div class="header-actions">
+        <a href="index.html" class="back-btn">
+          <i class="fas fa-arrow-left"></i> Back to Mood Selector
+        </a>
+        <button id="themeToggle" class="icon-btn">
+          <i class="fas fa-moon"></i> <span>Dark Mode</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="saved-section card">
+      <div id="savedContent">
+        <table id="savedTable">
+          <thead>
+            <tr>
+              <th>Meal</th>
+              <th>Details</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="savedBody"></tbody>
+        </table>
+        <div id="emptyState" class="empty-state">
+          <i class="fas fa-book-open"></i>
+          <h3>No Saved Meals Yet</h3>
+          <p>Your saved recipes will appear here when you save them.</p>
+          <a href="index.html" class="primary-btn">
+            <i class="fas fa-utensils"></i> Find Some Meals
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 MoodMeal. <span id="saveCount">0</span> meals saved so far.</p>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Theme Management
+      function initializeTheme() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+          document.body.classList.add('dark');
+          updateThemeToggle(true);
+        }
+      }
+
+      function updateThemeToggle(isDark) {
+        const icon = document.querySelector('#themeToggle i');
+        const text = document.querySelector('#themeToggle span');
+        if (icon) icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+        if (text) text.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+      }
+
+      // Set up theme toggle
+      document.getElementById('themeToggle')?.addEventListener('click', function() {
+        document.body.classList.toggle('dark');
+        const isDark = document.body.classList.contains('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        updateThemeToggle(isDark);
+      });
+
+      // Initialize theme on load
+      initializeTheme();
+
+      // Load saved meals
+      const savedMeals = JSON.parse(localStorage.getItem("savedMeals") || []);
+      const tableBody = document.getElementById("savedBody");
+      const emptyState = document.getElementById("emptyState");
+      const savedTable = document.getElementById("savedTable");
+      const saveCount = document.getElementById("saveCount");
+
+      // Update save count
+      saveCount.textContent = savedMeals.length;
+
+      if (savedMeals.length > 0) {
+        emptyState.style.display = "none";
+        savedTable.style.display = "table";
+        
+        savedMeals.forEach((meal, index) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>
+              <div class="meal-info">
+                ${meal.image ? `<img src="${meal.image}" alt="${meal.title}" class="meal-thumb">` : ''}
+                <span>${meal.title}</span>
+              </div>
+            </td>
+            <td>
+              <a href="${meal.link}" target="_blank" class="recipe-link">
+                <i class="fas fa-external-link-alt"></i> View Recipe
+              </a>
+            </td>
+            <td>
+              <button class="delete-btn" data-index="${index}">
+                <i class="fas fa-trash"></i> Remove
+              </button>
+            </td>
+          `;
+          tableBody.appendChild(row);
+        });
+
+        // Add event listeners to delete buttons
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const index = parseInt(this.getAttribute('data-index'));
+            const savedMeals = JSON.parse(localStorage.getItem("savedMeals") || []);
+            savedMeals.splice(index, 1);
+            localStorage.setItem("savedMeals", JSON.stringify(savedMeals));
+            location.reload();
+          });
+        });
+      } else {
+        savedTable.style.display = "none";
+        emptyState.style.display = "flex";
+      }
+    });
+  </script>
+</body>
+</html>

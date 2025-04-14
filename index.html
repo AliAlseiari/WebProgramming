@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MoodMeal - Feed Your Feelings</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Smooth transition for dark mode toggle */
+    body, header, footer, .card, button, select {
+      transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
+    }
+    
+    /* Animation for theme toggle button */
+    #themeToggle i {
+      transition: transform 0.3s ease;
+    }
+    
+    /* Pulse animation when theme changes */
+    @keyframes gentlePulse {
+      0% { opacity: 0.9; }
+      50% { opacity: 1; }
+      100% { opacity: 0.9; }
+    }
+    
+    body.dark-mode-transition {
+      animation: gentlePulse 0.8s ease;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header Section -->
+  <header>
+    <div class="header-content">
+      <h1><i class="fas fa-utensils"></i> MoodMeal</h1>
+      <button id="themeToggle" class="icon-btn">
+        <i class="fas fa-moon"></i> <span>Dark Mode</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <section class="form-section card">
+      <h2>How are you feeling today?</h2>
+      <form id="moodForm">
+        <div class="form-group">
+          <select id="moodSelect" required>
+            <option value="">-- Select your mood --</option>
+            <option value="happy">😎 Happy</option>
+            <option value="sad">😔 Sad</option>
+            <option value="tired">🥱 Tired</option>
+            <option value="angry">😡 Angry</option>
+            <option value="hungry">🍽️ Hungry</option>
+          </select>
+        </div>
+        <button type="submit" class="primary-btn">
+          <i class="fas fa-search"></i> Find My Meal
+        </button>
+        <p id="error" class="error"></p>
+      </form>
+    </section>
+
+    <section class="result-section card" id="resultSection" style="display: none">
+      <div class="result-header">
+        <h2>Your Mood Meal Recommendation</h2>
+        <button id="saveRecipe" class="secondary-btn">
+          <i class="fas fa-bookmark"></i> Save Recipe
+        </button>
+      </div>
+      
+      <div class="meal-container">
+        <img id="mealImage" src="" alt="Meal Image" class="meal-image" />
+        <div class="meal-details">
+          <h3 id="mealTitle"></h3>
+          <div class="meal-meta">
+            <span id="mealTime"><i class="fas fa-clock"></i> <span id="timeValue">30</span> mins</span>
+            <span id="mealServings"><i class="fas fa-users"></i> <span id="servingsValue">2</span> servings</span>
+          </div>
+          <p id="mealInstructions"></p>
+          <a id="mealLink" href="#" target="_blank" class="recipe-link">
+            <i class="fas fa-external-link-alt"></i> View Full Recipe
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer Section -->
+  <footer>
+    <p>&copy; 2025 MoodMeal. Designed with <i class="fas fa-heart"></i> by Someone With a Mild Headache.</p>
+    <a href="saved.html" class="footer-link">
+      <i class="fas fa-bookmark"></i> View Saved Recipes
+    </a>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // DOM Elements
+      const body = document.body;
+      const form = document.getElementById("moodForm");
+      const moodSelect = document.getElementById("moodSelect");
+      const error = document.getElementById("error");
+      const resultSection = document.getElementById("resultSection");
+      const mealImage = document.getElementById("mealImage");
+      const mealTitle = document.getElementById("mealTitle");
+      const mealInstructions = document.getElementById("mealInstructions");
+      const mealLink = document.getElementById("mealLink");
+      const saveBtn = document.getElementById("saveRecipe");
+      const themeToggle = document.getElementById("themeToggle");
+      const timeValue = document.getElementById("timeValue");
+      const servingsValue = document.getElementById("servingsValue");
+
+      // Theme Management with Animation
+      function initializeTheme() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+          body.classList.add('dark');
+          updateThemeToggle(true);
+        }
+      }
+
+      function updateThemeToggle(isDark) {
+        const icon = themeToggle.querySelector('i');
+        const text = themeToggle.querySelector('span');
+        if (icon) {
+          icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+          icon.style.transform = isDark ? 'rotate(360deg)' : 'rotate(0deg)';
+        }
+        if (text) text.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+      }
+
+      themeToggle.addEventListener('click', function() {
+        // Add transition class for animation
+        body.classList.add('dark-mode-transition');
+        
+        // Toggle dark mode
+        const isDark = !body.classList.contains('dark');
+        body.classList.toggle('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        
+        // Update toggle button with animation
+        updateThemeToggle(isDark);
+        
+        // Remove animation class after transition
+        setTimeout(() => {
+          body.classList.remove('dark-mode-transition');
+        }, 800);
+      });
+
+      // Initialize theme on load
+      initializeTheme();
+
+      // Mood to Category Mapping
+      const moodMap = {
+        happy: "Dessert",
+        sad: "Pasta",
+        tired: "Breakfast",
+        angry: "Beef",
+        hungry: "Chicken"
+      };
+
+      // Form Submission Handler
+      form.addEventListener("submit", async function(e) {
+        e.preventDefault();
+        const mood = moodSelect.value;
+        
+        if (!mood) {
+          showError("Please select your mood first!");
+          return;
+        }
+
+        try {
+          showLoading(true);
+          const category = moodMap[mood];
+          
+          // Fetch random meal by category
+          const res = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${category}`);
+          
+          if (!res.ok) throw new Error("Failed to fetch meals");
+          
+          const data = await res.json();
+          
+          if (!data.meals || data.meals.length === 0) {
+            throw new Error("No meals found for this category");
+          }
+          
+          // Get random meal
+          const randomMeal = data.meals[Math.floor(Math.random() * data.meals.length)];
+          
+          // Fetch meal details
+          const mealRes = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${randomMeal.idMeal}`);
+          
+          if (!mealRes.ok) throw new Error("Failed to fetch meal details");
+          
+          const mealData = await mealRes.json();
+          const meal = mealData.meals[0];
+          
+          // Display meal with animation
+          mealImage.src = meal.strMealThumb;
+          mealImage.alt = meal.strMeal;
+          mealTitle.textContent = meal.strMeal;
+          mealImage.style.opacity = 0;
+          setTimeout(() => { mealImage.style.opacity = 1; }, 100);
+          
+          // Clean up instructions
+          const cleanInstructions = meal.strInstructions
+            .replace(/\r\n/g, "\n")
+            .split("\n")
+            .filter(para => para.trim() !== "")
+            .slice(0, 4)
+            .join("\n\n");
+          
+          mealInstructions.textContent = cleanInstructions;
+          mealLink.href = meal.strYoutube || 
+                         `https://www.google.com/search?q=${encodeURIComponent(meal.strMeal + " recipe")}`;
+          
+          // Show result section with animation
+          resultSection.style.display = "block";
+          resultSection.style.opacity = 0;
+          setTimeout(() => {
+            resultSection.style.opacity = 1;
+            resultSection.scrollIntoView({ behavior: "smooth" });
+          }, 50);
+          
+        } catch (err) {
+          console.error("Error:", err);
+          showError("Oops! We couldn't find a meal for your mood. Please try again.");
+        } finally {
+          showLoading(false);
+        }
+      });
+
+      // Save Recipe Handler
+      saveBtn.addEventListener("click", function() {
+        const saved = JSON.parse(localStorage.getItem("savedMeals") || "[]");
+        saved.push({
+          title: mealTitle.textContent,
+          link: mealLink.href,
+          image: mealImage.src
+        });
+        
+        localStorage.setItem("savedMeals", JSON.stringify(saved));
+        
+        // Animate save button
+        saveBtn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+        saveBtn.style.transform = "scale(1.1)";
+        setTimeout(() => {
+          saveBtn.style.transform = "scale(1)";
+        }, 300);
+      });
+
+      // Helper Functions
+      function showError(message) {
+        error.textContent = message;
+        error.style.display = "block";
+        error.style.animation = "fadeIn 0.3s ease";
+        setTimeout(() => {
+          error.style.display = "none";
+        }, 3000);
+      }
+
+      function showLoading(show) {
+        const submitBtn = form.querySelector("button[type='submit']");
+        if (show) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
+        } else {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fas fa-search"></i> Find My Meal';
+        }
+      }
+    });
+  </script>
+</body>
+</html>
